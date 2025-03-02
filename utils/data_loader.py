@@ -2,58 +2,90 @@ import pandas as pd
 import numpy as np
 from typing import Dict, List
 import spacy
+import json
+from sqlalchemy.orm import Session
+from models import SessionLocal, ICD10Code
 
 class ICD10DataLoader:
     def __init__(self):
-        # Sample ICD-10 data structure
-        self.data = {
-            'code': [
-                'A00.0', 'A00.1', 'A00.9',
-                'B01.0', 'B01.1', 'B01.9',
-                'C50.1', 'C50.2', 'C50.9'
-            ],
-            'description': [
-                'Cholera due to Vibrio cholerae 01, biovar cholerae',
-                'Cholera due to Vibrio cholerae 01, biovar eltor',
-                'Cholera, unspecified',
-                'Varicella meningitis',
-                'Varicella encephalitis',
-                'Varicella without complication',
-                'Malignant neoplasm of central portion of breast',
-                'Malignant neoplasm of upper-inner quadrant of breast',
-                'Malignant neoplasm of breast, unspecified'
-            ],
-            'category': [
-                'Infectious diseases',
-                'Infectious diseases',
-                'Infectious diseases',
-                'Viral infections',
-                'Viral infections',
-                'Viral infections',
-                'Neoplasms',
-                'Neoplasms',
-                'Neoplasms'
-            ]
-        }
-        self.df = pd.DataFrame(self.data)
         self.nlp = spacy.load('en_core_web_sm')
-        self._process_descriptions()
+        self._initialize_database()
 
-    def _process_descriptions(self):
-        """Process descriptions with spaCy and create vectors"""
-        self.vectors = np.array([
-            self.nlp(desc).vector 
-            for desc in self.df['description']
-        ])
+    def _initialize_database(self):
+        """Initialize database with sample data if empty"""
+        db = SessionLocal()
+        if db.query(ICD10Code).count() == 0:
+            sample_data = {
+                'code': [
+                    'A00.0', 'A00.1', 'A00.9',
+                    'B01.0', 'B01.1', 'B01.9',
+                    'C50.1', 'C50.2', 'C50.9'
+                ],
+                'description': [
+                    'Cholera due to Vibrio cholerae 01, biovar cholerae',
+                    'Cholera due to Vibrio cholerae 01, biovar eltor',
+                    'Cholera, unspecified',
+                    'Varicella meningitis',
+                    'Varicella encephalitis',
+                    'Varicella without complication',
+                    'Malignant neoplasm of central portion of breast',
+                    'Malignant neoplasm of upper-inner quadrant of breast',
+                    'Malignant neoplasm of breast, unspecified'
+                ],
+                'category': [
+                    'Infectious diseases',
+                    'Infectious diseases',
+                    'Infectious diseases',
+                    'Viral infections',
+                    'Viral infections',
+                    'Viral infections',
+                    'Neoplasms',
+                    'Neoplasms',
+                    'Neoplasms'
+                ]
+            }
+
+            for i in range(len(sample_data['code'])):
+                vector = self.nlp(sample_data['description'][i]).vector
+                code = ICD10Code(
+                    code=sample_data['code'][i],
+                    description=sample_data['description'][i],
+                    category=sample_data['category'][i],
+                    vector=json.dumps(vector.tolist())
+                )
+                db.add(code)
+            db.commit()
+        db.close()
 
     def get_all_categories(self) -> List[str]:
         """Return unique categories"""
-        return sorted(self.df['category'].unique())
+        db = SessionLocal()
+        categories = db.query(ICD10Code.category).distinct().all()
+        db.close()
+        return sorted([cat[0] for cat in categories])
 
     def get_data(self) -> pd.DataFrame:
         """Return the complete dataset"""
-        return self.df
+        db = SessionLocal()
+        codes = db.query(ICD10Code).all()
+        db.close()
+
+        data = {
+            'code': [],
+            'description': [],
+            'category': [],
+            'vector': []
+        }
+
+        for code in codes:
+            data['code'].append(code.code)
+            data['description'].append(code.description)
+            data['category'].append(code.category)
+            data['vector'].append(np.array(json.loads(code.vector)))
+
+        return pd.DataFrame(data)
 
     def get_vectors(self) -> np.ndarray:
         """Return processed vectors"""
-        return self.vectors
+        df = self.get_data()
+        return np.vstack(df['vector'].values)
