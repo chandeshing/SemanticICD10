@@ -57,6 +57,16 @@ def search():
         logger.error(f"Search error: {str(e)}")
         return jsonify({'error': 'An error occurred during search'}), 500
 
+@app.route('/impressum')
+def impressum():
+    logger.info("Loading impressum page...")
+    return render_template('impressum.html')
+
+@app.route('/datenschutz')
+def datenschutz():
+    logger.info("Loading datenschutz page...")
+    return render_template('datenschutz.html')
+
 if __name__ == '__main__':
     logger.info("Starting Flask application...")
     app.run(host='0.0.0.0', port=5000)

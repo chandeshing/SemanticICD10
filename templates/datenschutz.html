@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Datenschutz - ICD-10 Semantische Suche</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>Datenschutzerklärung</h1>
+        <div class="mt-4">
+            <h2>1. Datenschutz auf einen Blick</h2>
+            <h3>Allgemeine Hinweise</h3>
+            <p>
+                Die folgenden Hinweise geben einen einfachen Überblick darüber, was mit Ihren personenbezogenen Daten passiert,
+                wenn Sie diese Website besuchen. Personenbezogene Daten sind alle Daten, mit denen Sie persönlich identifiziert
+                werden können.
+            </p>
+
+            <h3>Datenerfassung auf dieser Website</h3>
+            <p>
+                Die Datenverarbeitung auf dieser Website erfolgt durch den Websitebetreiber. Die Kontaktdaten können Sie dem
+                Impressum dieser Website entnehmen.
+            </p>
+
+            <h2>2. Hosting</h2>
+            <p>
+                Wir hosten die Inhalte unserer Website bei Replit.
+            </p>
+
+            <h2>3. Allgemeine Hinweise und Pflichtinformationen</h2>
+            <h3>Datenschutz</h3>
+            <p>
+                Die Betreiber dieser Seiten nehmen den Schutz Ihrer persönlichen Daten sehr ernst. Wir behandeln Ihre
+                personenbezogenen Daten vertraulich und entsprechend der gesetzlichen Datenschutzvorschriften sowie
+                dieser Datenschutzerklärung.
+            </p>
+        </div>
+
+        <div class="mt-4">
+            <a href="{{ url_for('index') }}" class="btn btn-primary">Zurück zur Startseite</a>
+        </div>
+
+        <!-- Footer -->
+        <footer class="mt-5 pb-4">
+            <hr>
+            <div class="d-flex justify-content-between">
+                <div>
+                    © 2025 ICD-10 Semantische Suche
+                </div>
+                <div>
+                    <a href="{{ url_for('impressum') }}" class="me-3">Impressum</a>
+                    <a href="{{ url_for('datenschutz') }}">Datenschutz</a>
+                </div>
+            </div>
+        </footer>
+    </div>
+</body>
+</html>
