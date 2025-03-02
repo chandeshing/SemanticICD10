@@ -4,17 +4,18 @@ import os
 
 db = SQLAlchemy()
 
-class ICD10Code(db.Model):
-    __tablename__ = "icd10_codes"
+class MedicalCode(db.Model):
+    __tablename__ = "medical_codes"
 
     id = Column(Integer, primary_key=True, index=True)
-    code = Column(String, unique=True, index=True)
+    code = Column(String, index=True)
     description = Column(String)
     category = Column(String)
+    classifier_type = Column(String)  # New field for classifier type
     vector = Column(String)  # Store vector as JSON string
 
     def __repr__(self):
-        return f"<ICD10Code {self.code}>"
+        return f"<MedicalCode {self.classifier_type}:{self.code}>"
 
 # Initialize database
 def init_db(app):

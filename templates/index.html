@@ -3,21 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ICD-10 Semantische Suche</title>
+    <title>Medizinische Code Suche</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <div class="container mt-5">
-        <h1 class="text-center mb-4">🏥 ICD-10 Semantische Suche</h1>
-        <p class="text-center mb-4">Durchsuchen Sie ICD-10 medizinische Codes mit natürlicher Sprache.</p>
+        <h1 class="text-center mb-4">🏥 Medizinische Code Suche</h1>
+        <p class="text-center mb-4">Durchsuchen Sie medizinische Codes mit natürlicher Sprache.</p>
 
         <div class="search-container">
             <form id="searchForm" class="mb-4">
                 <div class="row">
-                    <div class="col-md-8">
+                    <div class="col-md-6">
                         <input type="text" id="searchQuery" class="form-control" 
-                               placeholder="Beispiel: Brustkrebs, Cholera, Virusinfektion">
+                               placeholder="Beispiel: Brustkrebs, Cholera, Angststörung">
+                    </div>
+                    <div class="col-md-2">
+                        <select id="classifierFilter" class="form-select">
+                            {% for classifier in classifiers %}
+                            <option value="{{ classifier }}">{{ classifier }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
                     <div class="col-md-2">
                         <select id="categoryFilter" class="form-select">
@@ -41,10 +48,10 @@
                 <div class="card-body">
                     <h5 class="card-title">Wie man diese Suche benutzt</h5>
                     <ul class="mb-0">
+                        <li>Wählen Sie den gewünschten Klassifikator (ICD-10, ICF, etc.)</li>
                         <li>Geben Sie Ihre Suchbegriffe in natürlicher Sprache ein</li>
                         <li>Optional nach Kategorie filtern</li>
                         <li>Ergebnisse werden nach Relevanz sortiert</li>
-                        <li>Klicken Sie auf Codes für detaillierte Informationen</li>
                         <li>Verwenden Sie medizinische Begriffe für bessere Ergebnisse</li>
                     </ul>
                 </div>
@@ -56,7 +63,7 @@
             <hr>
             <div class="d-flex justify-content-between">
                 <div>
-                    © 2025 ICD-10 Semantische Suche
+                    © 2025 Medizinische Code Suche
                 </div>
                 <div>
                     <a href="{{ url_for('impressum') }}" class="me-3">Impressum</a>
@@ -67,9 +74,28 @@
     </div>
 
     <script>
+        // Update categories when classifier changes
+        document.getElementById('classifierFilter').addEventListener('change', async (e) => {
+            const classifier = e.target.value;
+            const categorySelect = document.getElementById('categoryFilter');
+
+            try {
+                const response = await fetch(`/categories/${classifier}`);
+                const data = await response.json();
+
+                categorySelect.innerHTML = '<option value="All">Alle Kategorien</option>';
+                data.categories.forEach(category => {
+                    categorySelect.innerHTML += `<option value="${category}">${category}</option>`;
+                });
+            } catch (error) {
+                console.error('Error fetching categories:', error);
+            }
+        });
+
         document.getElementById('searchForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const query = document.getElementById('searchQuery').value;
+            const classifier = document.getElementById('classifierFilter').value;
             const category = document.getElementById('categoryFilter').value;
 
             if (!query) {
@@ -88,6 +114,7 @@
                     },
                     body: JSON.stringify({
                         query: query,
+                        classifier_type: classifier,
                         category: category === 'All' ? null : category
                     }),
                 });
@@ -102,6 +129,7 @@
                                 <span class="code-badge">${result.code}</span>
                                 <h4>${result.description}</h4>
                                 <p>Kategorie: ${result.category}</p>
+                                <p>Klassifikator: ${result.classifier_type}</p>
                                 <span class="score-badge">Relevanz: ${result.score.toFixed(2)}</span>
                             </div>
                         `).join('')}

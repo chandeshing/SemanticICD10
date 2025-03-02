@@ -3,70 +3,120 @@ import numpy as np
 from typing import Dict, List
 import spacy
 import json
-from models import db, ICD10Code
+from models import db, MedicalCode
 
-class ICD10DataLoader:
+class MedicalDataLoader:
     def __init__(self):
         self.nlp = spacy.load('en_core_web_sm')
         self._initialize_database()
 
     def _initialize_database(self):
         """Initialize database with sample data if empty"""
-        if ICD10Code.query.count() == 0:
+        if MedicalCode.query.count() == 0:
             sample_data = {
-                'code': [
-                    'A00.0', 'A00.1', 'A00.9',
-                    'B01.0', 'B01.1', 'B01.9',
-                    'C50.1', 'C50.2', 'C50.9'
-                ],
-                'description': [
-                    'Cholera due to Vibrio cholerae 01, biovar cholerae',
-                    'Cholera due to Vibrio cholerae 01, biovar eltor',
-                    'Cholera, unspecified',
-                    'Varicella meningitis',
-                    'Varicella encephalitis',
-                    'Varicella without complication',
-                    'Malignant neoplasm of central portion of breast',
-                    'Malignant neoplasm of upper-inner quadrant of breast',
-                    'Malignant neoplasm of breast, unspecified'
-                ],
-                'category': [
-                    'Infectious diseases',
-                    'Infectious diseases',
-                    'Infectious diseases',
-                    'Viral infections',
-                    'Viral infections',
-                    'Viral infections',
-                    'Neoplasms',
-                    'Neoplasms',
-                    'Neoplasms'
-                ]
+                'ICD-10': {
+                    'codes': ['A00.0', 'A00.1', 'C50.1'],
+                    'descriptions': [
+                        'Cholera due to Vibrio cholerae',
+                        'Cholera due to Vibrio eltor',
+                        'Malignant neoplasm of breast'
+                    ],
+                    'categories': ['Infectious', 'Infectious', 'Neoplasms']
+                },
+                'ICF': {
+                    'codes': ['b110', 'b114', 'd450'],
+                    'descriptions': [
+                        'Consciousness functions',
+                        'Orientation functions',
+                        'Walking'
+                    ],
+                    'categories': ['Mental Functions', 'Mental Functions', 'Mobility']
+                },
+                'ICD-11': {
+                    'codes': ['1A00', '1B01', '2A00'],
+                    'descriptions': [
+                        'Cholera',
+                        'Typhoid fever',
+                        'Oral cavity neoplasms'
+                    ],
+                    'categories': ['Infectious', 'Infectious', 'Neoplasms']
+                },
+                'DRG': {
+                    'codes': ['F01A', 'F03A', 'G01A'],
+                    'descriptions': [
+                        'Cardiac valve procedure',
+                        'Cardiac defibrillator implant',
+                        'Neurological procedure'
+                    ],
+                    'categories': ['Cardiac', 'Cardiac', 'Neurology']
+                },
+                'OPS': {
+                    'codes': ['5-01', '5-02', '5-03'],
+                    'descriptions': [
+                        'Operation on skull',
+                        'Operation on brain',
+                        'Operation on spine'
+                    ],
+                    'categories': ['Surgery', 'Surgery', 'Surgery']
+                },
+                'Morbi-RSA': {
+                    'codes': ['HCC001', 'HCC002', 'HCC003'],
+                    'descriptions': [
+                        'HIV/AIDS',
+                        'Septicemia',
+                        'Opportunistic Infections'
+                    ],
+                    'categories': ['Infectious', 'Infectious', 'Infectious']
+                },
+                'DSM-5': {
+                    'codes': ['300.00', '300.02', '300.29'],
+                    'descriptions': [
+                        'Anxiety Disorder',
+                        'Generalized Anxiety',
+                        'Specific Phobia'
+                    ],
+                    'categories': ['Anxiety', 'Anxiety', 'Anxiety']
+                }
             }
 
-            for i in range(len(sample_data['code'])):
-                vector = self.nlp(sample_data['description'][i]).vector
-                code = ICD10Code(
-                    code=sample_data['code'][i],
-                    description=sample_data['description'][i],
-                    category=sample_data['category'][i],
-                    vector=json.dumps(vector.tolist())
-                )
-                db.session.add(code)
+            for classifier, data in sample_data.items():
+                for i in range(len(data['codes'])):
+                    vector = self.nlp(data['descriptions'][i]).vector
+                    code = MedicalCode(
+                        code=data['codes'][i],
+                        description=data['descriptions'][i],
+                        category=data['categories'][i],
+                        classifier_type=classifier,
+                        vector=json.dumps(vector.tolist())
+                    )
+                    db.session.add(code)
             db.session.commit()
 
-    def get_all_categories(self) -> List[str]:
-        """Return unique categories"""
-        categories = db.session.query(ICD10Code.category).distinct().all()
+    def get_classifier_types(self) -> List[str]:
+        """Return available classifier types"""
+        classifiers = db.session.query(MedicalCode.classifier_type).distinct().all()
+        return sorted([c[0] for c in classifiers])
+
+    def get_all_categories(self, classifier_type: str = None) -> List[str]:
+        """Return unique categories for a specific classifier"""
+        query = db.session.query(MedicalCode.category).distinct()
+        if classifier_type:
+            query = query.filter(MedicalCode.classifier_type == classifier_type)
+        categories = query.all()
         return sorted([cat[0] for cat in categories])
 
-    def get_data(self) -> pd.DataFrame:
-        """Return the complete dataset"""
-        codes = ICD10Code.query.all()
+    def get_data(self, classifier_type: str = None) -> pd.DataFrame:
+        """Return the complete dataset for a specific classifier"""
+        query = MedicalCode.query
+        if classifier_type:
+            query = query.filter(MedicalCode.classifier_type == classifier_type)
+        codes = query.all()
 
         data = {
             'code': [],
             'description': [],
             'category': [],
+            'classifier_type': [],
             'vector': []
         }
 
@@ -74,11 +124,12 @@ class ICD10DataLoader:
             data['code'].append(code.code)
             data['description'].append(code.description)
             data['category'].append(code.category)
+            data['classifier_type'].append(code.classifier_type)
             data['vector'].append(np.array(json.loads(code.vector)))
 
         return pd.DataFrame(data)
 
-    def get_vectors(self) -> np.ndarray:
-        """Return processed vectors"""
-        df = self.get_data()
+    def get_vectors(self, classifier_type: str = None) -> np.ndarray:
+        """Return processed vectors for a specific classifier"""
+        df = self.get_data(classifier_type)
         return np.vstack(df['vector'].values)

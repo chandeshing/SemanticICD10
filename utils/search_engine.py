@@ -2,19 +2,19 @@ import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 import spacy
 from typing import List, Dict, Tuple, Optional
-import pandas as pd
 
 class SemanticSearchEngine:
     def __init__(self, data_loader):
         self.data_loader = data_loader
         self.nlp = spacy.load('en_core_web_sm')
 
-    def search(self, query: str, category: Optional[str] = None, top_k: int = 5) -> List[Dict]:
+    def search(self, query: str, classifier_type: str = None, category: Optional[str] = None, top_k: int = 5) -> List[Dict]:
         """
-        Perform semantic search on ICD-10 codes
+        Perform semantic search on medical codes
 
         Args:
             query: Search query string
+            classifier_type: Type of classifier to search in (ICD-10, ICF, etc.)
             category: Optional category filter
             top_k: Number of results to return
 
@@ -25,9 +25,9 @@ class SemanticSearchEngine:
             # Process query
             query_vector = self.nlp(query).vector
 
-            # Get data and vectors
-            df = self.data_loader.get_data()
-            vectors = self.data_loader.get_vectors()
+            # Get data and vectors for specific classifier
+            df = self.data_loader.get_data(classifier_type)
+            vectors = self.data_loader.get_vectors(classifier_type)
 
             # Calculate similarities
             similarities = cosine_similarity([query_vector], vectors)[0]
@@ -50,6 +50,7 @@ class SemanticSearchEngine:
                     'code': row['code'],
                     'description': row['description'],
                     'category': row['category'],
+                    'classifier_type': row['classifier_type'],
                     'score': float(row['similarity'])
                 })
 
