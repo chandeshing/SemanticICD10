@@ -10,32 +10,21 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-# Get DATABASE_URL from environment, with fallback
 database_url = os.getenv('DATABASE_URL')
-# Railway uses DATABASE_URL, but we need to handle potential postgres:// format
 if database_url and database_url.startswith('postgres://'):
     database_url = database_url.replace('postgres://', 'postgresql://', 1)
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Initialize database only if DATABASE_URL is provided
-logger.info("Initializing database...")
-if database_url:
-    init_db(app)
-else:
-    logger.warning("No DATABASE_URL found, skipping database initialization")
-
-# Initialize search components within app context
+# Initialize database and search components
+init_db(app)
 with app.app_context():
-    logger.info("Initializing search components...")
     data_loader = MedicalDataLoader()
     search_engine = SemanticSearchEngine(data_loader)
-    logger.info("Application initialization complete")
 
 @app.route('/')
 def index():
     try:
-        logger.info("Loading index page...")
         classifiers = data_loader.get_classifier_types()
         categories = data_loader.get_all_categories()
         return render_template('index.html', classifiers=classifiers, categories=categories)
@@ -51,8 +40,6 @@ def search():
         category = data.get('category', None)
         classifier_type = data.get('classifier_type', None)
 
-        logger.info(f"Processing search request - Query: {query}, Category: {category}, Classifier: {classifier_type}")
-
         if not query:
             return jsonify({'error': 'No search query provided'}), 400
 
@@ -60,7 +47,6 @@ def search():
             category = None
 
         results = search_engine.search(query, classifier_type, category)
-        logger.info(f"Search completed - Found {len(results)} results")
         return jsonify({'results': results})
 
     except Exception as e:
@@ -78,15 +64,12 @@ def get_categories(classifier_type):
 
 @app.route('/impressum')
 def impressum():
-    logger.info("Loading impressum page...")
     return render_template('impressum.html')
 
 @app.route('/datenschutz')
 def datenschutz():
-    logger.info("Loading datenschutz page...")
     return render_template('datenschutz.html')
 
 if __name__ == '__main__':
-    logger.info("Starting Flask application...")
     port = int(os.getenv('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
