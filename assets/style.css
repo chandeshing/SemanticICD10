@@ -1,0 +1,35 @@
+.stApp {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.search-container {
+    padding: 2rem;
+    border-radius: 10px;
+    background-color: #f8f9fa;
+    margin-bottom: 2rem;
+}
+
+.result-card {
+    padding: 1.5rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    background-color: white;
+}
+
+.code-badge {
+    background-color: #0066cc;
+    color: white;
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.score-badge {
+    background-color: #28a745;
+    color: white;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+}
