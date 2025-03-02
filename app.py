@@ -10,12 +10,20 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
+# Get DATABASE_URL from environment, with fallback
+database_url = os.getenv('DATABASE_URL')
+# Railway uses DATABASE_URL, but we need to handle potential postgres:// format
+if database_url and database_url.startswith('postgres://'):
+    database_url = database_url.replace('postgres://', 'postgresql://', 1)
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Initialize database
+# Initialize database only if DATABASE_URL is provided
 logger.info("Initializing database...")
-init_db(app)
+if database_url:
+    init_db(app)
+else:
+    logger.warning("No DATABASE_URL found, skipping database initialization")
 
 # Initialize search components within app context
 with app.app_context():
@@ -80,4 +88,5 @@ def datenschutz():
 
 if __name__ == '__main__':
     logger.info("Starting Flask application...")
-    app.run(host='0.0.0.0', port=5000)
+    port = int(os.getenv('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
