@@ -9,6 +9,13 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Load environment variables from .env file if present
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # dotenv not installed, using environment variables directly
+
 app = Flask(__name__)
 database_url = os.getenv('DATABASE_URL')
 if database_url and database_url.startswith('postgres://'):
