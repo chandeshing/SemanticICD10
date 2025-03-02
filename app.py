@@ -1,100 +1,62 @@
-import streamlit as st
-import pandas as pd
+from flask import Flask, render_template, request, jsonify
 from utils.data_loader import ICD10DataLoader
 from utils.search_engine import SemanticSearchEngine
+from models import db, init_db
+import os
+import logging
 
-# Page configuration
-st.set_page_config(
-    page_title="ICD-10 Semantic Search",
-    page_icon="🏥",
-    layout="wide"
-)
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Load custom CSS
-with open('assets/style.css') as f:
-    st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-@st.cache_resource
-def initialize_search_engine():
+# Initialize database
+logger.info("Initializing database...")
+init_db(app)
+
+# Initialize search components within app context
+with app.app_context():
+    logger.info("Initializing search components...")
     data_loader = ICD10DataLoader()
-    return SemanticSearchEngine(data_loader), data_loader
+    search_engine = SemanticSearchEngine(data_loader)
+    logger.info("Application initialization complete")
 
-# Initialize search engine and data loader
-search_engine, data_loader = initialize_search_engine()
+@app.route('/')
+def index():
+    try:
+        logger.info("Loading index page...")
+        categories = data_loader.get_all_categories()
+        return render_template('index.html', categories=categories)
+    except Exception as e:
+        logger.error(f"Error loading index: {str(e)}")
+        return render_template('index.html', categories=[], error="Error loading categories")
 
-# Header
-st.title("🏥 ICD-10 Semantic Search")
-st.markdown("""
-    Search for ICD-10 medical codes using natural language. 
-    Enter your query below and get relevant matches based on semantic similarity.
-""")
+@app.route('/search', methods=['POST'])
+def search():
+    try:
+        data = request.get_json()
+        query = data.get('query', '')
+        category = data.get('category', None)
 
-# Search interface
-with st.container():
-    col1, col2 = st.columns([3, 1])
-    
-    with col1:
-        search_query = st.text_input(
-            "Enter your search query",
-            placeholder="Example: breast cancer, cholera, viral infection",
-            key="search_input"
-        )
-    
-    with col2:
-        categories = ["All"] + data_loader.get_all_categories()
-        selected_category = st.selectbox(
-            "Filter by category",
-            categories,
-            key="category_filter"
-        )
+        logger.info(f"Processing search request - Query: {query}, Category: {category}")
 
-# Search button
-search_button = st.button("Search", key="search_button", type="primary")
+        if not query:
+            return jsonify({'error': 'No search query provided'}), 400
 
-# Process search
-if search_button and search_query:
-    with st.spinner("Searching..."):
-        results = search_engine.search(
-            search_query,
-            category=selected_category if selected_category != "All" else None
-        )
-        
-        if results:
-            st.markdown("### Search Results")
-            
-            for result in results:
-                with st.container():
-                    col1, col2 = st.columns([4, 1])
-                    
-                    with col1:
-                        st.markdown(f"""
-                            <div class="result-card">
-                                <span class="code-badge">{result['code']}</span>
-                                <h4>{result['description']}</h4>
-                                <p>Category: {result['category']}</p>
-                                <span class="score-badge">Relevance: {result['score']:.2f}</span>
-                            </div>
-                        """, unsafe_allow_html=True)
-        else:
-            st.warning("No results found. Please try a different search query.")
+        if category == "All":
+            category = None
 
-# Error handling
-elif search_button and not search_query:
-    st.error("Please enter a search query.")
+        results = search_engine.search(query, category)
+        logger.info(f"Search completed - Found {len(results)} results")
+        return jsonify({'results': results})
 
-# Help section
-with st.expander("How to use this search"):
-    st.markdown("""
-        - Enter your search terms in natural language
-        - Optionally filter by category
-        - Results are ranked by relevance
-        - Click on codes for detailed information
-        - Use medical terms for better results
-    """)
+    except Exception as e:
+        logger.error(f"Search error: {str(e)}")
+        return jsonify({'error': 'An error occurred during search'}), 500
 
-# Footer
-st.markdown("---")
-st.markdown(
-    "Built with Streamlit and spaCy | ICD-10 Semantic Search Tool",
-    help="Using semantic search technology for medical code lookup"
-)
+if __name__ == '__main__':
+    logger.info("Starting Flask application...")
+    app.run(host='0.0.0.0', port=5000)

@@ -1,19 +1,10 @@
-from sqlalchemy import create_engine, Column, String, Float, Integer
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import Column, String, Float, Integer
 import os
 
-# Get database URL from environment
-DATABASE_URL = os.getenv('DATABASE_URL')
+db = SQLAlchemy()
 
-# Create engine and session
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-# Create base class for models
-Base = declarative_base()
-
-class ICD10Code(Base):
+class ICD10Code(db.Model):
     __tablename__ = "icd10_codes"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -25,5 +16,8 @@ class ICD10Code(Base):
     def __repr__(self):
         return f"<ICD10Code {self.code}>"
 
-# Create tables
-Base.metadata.create_all(bind=engine)
+# Initialize database
+def init_db(app):
+    db.init_app(app)
+    with app.app_context():
+        db.create_all()

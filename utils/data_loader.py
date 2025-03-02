@@ -3,8 +3,7 @@ import numpy as np
 from typing import Dict, List
 import spacy
 import json
-from sqlalchemy.orm import Session
-from models import SessionLocal, ICD10Code
+from models import db, ICD10Code
 
 class ICD10DataLoader:
     def __init__(self):
@@ -13,8 +12,7 @@ class ICD10DataLoader:
 
     def _initialize_database(self):
         """Initialize database with sample data if empty"""
-        db = SessionLocal()
-        if db.query(ICD10Code).count() == 0:
+        if ICD10Code.query.count() == 0:
             sample_data = {
                 'code': [
                     'A00.0', 'A00.1', 'A00.9',
@@ -53,22 +51,17 @@ class ICD10DataLoader:
                     category=sample_data['category'][i],
                     vector=json.dumps(vector.tolist())
                 )
-                db.add(code)
-            db.commit()
-        db.close()
+                db.session.add(code)
+            db.session.commit()
 
     def get_all_categories(self) -> List[str]:
         """Return unique categories"""
-        db = SessionLocal()
-        categories = db.query(ICD10Code.category).distinct().all()
-        db.close()
+        categories = db.session.query(ICD10Code.category).distinct().all()
         return sorted([cat[0] for cat in categories])
 
     def get_data(self) -> pd.DataFrame:
         """Return the complete dataset"""
-        db = SessionLocal()
-        codes = db.query(ICD10Code).all()
-        db.close()
+        codes = ICD10Code.query.all()
 
         data = {
             'code': [],
