@@ -13,4 +13,5 @@ dependencies = [
     "spacy>=3.8.4",
     "sqlalchemy>=2.0.38",
     "streamlit>=1.42.2",
+    "repl-nix-workspace",
 ]
